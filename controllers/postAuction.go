@@ -30,6 +30,7 @@ func PostAuction(ctx *gin.Context) {
 			return
 		}
 		res.Owner = email
+		res.Created = time.Now()
 		err = validate.Struct(res)
 		if err != nil {
 			result <- responses.Response{
@@ -40,7 +41,7 @@ func PostAuction(ctx *gin.Context) {
 			return
 		}
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		auctionsCollection.InsertOne(ctxDB, res)
+		one, err := auctionsCollection.InsertOne(ctxDB, res)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,
@@ -52,7 +53,7 @@ func PostAuction(ctx *gin.Context) {
 		result <- responses.Response{
 			Status:  http.StatusAccepted,
 			Message: "accepted",
-			Data:    map[string]interface{}{"data": res},
+			Data:    map[string]interface{}{"data": one},
 		}
 	}(ctx.Copy())
 	res := <-result
