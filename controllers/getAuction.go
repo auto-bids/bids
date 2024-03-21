@@ -7,30 +7,21 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
 	"time"
 )
 
-func PostAuction(ctx *gin.Context) {
+func GetAuction(ctx *gin.Context) {
 	result := make(chan responses.Response)
 	go func(c *gin.Context) {
-		email := ctx.Param("email")
+		auctionID := ctx.Param("auctionid")
 		ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer close(result)
 		defer cancel()
-		var res models.Auction
+		var auction models.Auction
 		validate := validator.New(validator.WithRequiredStructEnabled())
-		err := c.ShouldBindJSON(&res)
-		if err != nil {
-			result <- responses.Response{
-				Status:  http.StatusBadRequest,
-				Message: "Invalid request body",
-				Data:    map[string]interface{}{"error": err.Error()},
-			}
-			return
-		}
-		res.Owner = email
-		err = validate.Struct(res)
+		err := validate.Struct(auction)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusBadRequest,
@@ -40,7 +31,8 @@ func PostAuction(ctx *gin.Context) {
 			return
 		}
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		auctionsCollection.InsertOne(ctxDB, res)
+		filter := bson.D{{"_id", auctionID}}
+		auctionsCollection.FindOne(ctxDB, filter).Decode(&auction)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,
@@ -52,7 +44,7 @@ func PostAuction(ctx *gin.Context) {
 		result <- responses.Response{
 			Status:  http.StatusAccepted,
 			Message: "accepted",
-			Data:    map[string]interface{}{"data": res},
+			Data:    map[string]interface{}{"data": auction},
 		}
 	}(ctx.Copy())
 	res := <-result
