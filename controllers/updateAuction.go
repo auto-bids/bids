@@ -12,16 +12,27 @@ import (
 	"time"
 )
 
-func GetAuction(ctx *gin.Context) {
+func UpdateAuction(ctx *gin.Context) {
 	result := make(chan responses.Response)
 	go func(c *gin.Context) {
-		auctionID := c.Param("auctionid")
+		auctionid := c.Param("auctionid")
+		email := c.Param("email")
 		ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer close(result)
 		defer cancel()
-		var auction models.Auction
+		var res models.Auction
 		validate := validator.New(validator.WithRequiredStructEnabled())
-		err := validate.Struct(auction)
+		err := c.ShouldBindJSON(&res)
+		if err != nil {
+			result <- responses.Response{
+				Status:  http.StatusBadRequest,
+				Message: "Invalid request body",
+				Data:    map[string]interface{}{"error": err.Error()},
+			}
+			return
+		}
+		res.Owner = email
+		err = validate.Struct(res)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusBadRequest,
@@ -31,12 +42,12 @@ func GetAuction(ctx *gin.Context) {
 			return
 		}
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		filter := bson.D{{"_id", auctionID}}
-		auctionsCollection.FindOne(ctxDB, filter).Decode(&auction)
+		filter := bson.D{{"_id", auctionid}, {"owner", email}}
+		auctionsCollection.UpdateOne(ctxDB, filter, res)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,
-				Message: "Error adding auction",
+				Message: "Error updating auction",
 				Data:    map[string]interface{}{"error": err.Error()},
 			}
 			return
@@ -44,7 +55,7 @@ func GetAuction(ctx *gin.Context) {
 		result <- responses.Response{
 			Status:  http.StatusAccepted,
 			Message: "accepted",
-			Data:    map[string]interface{}{"data": auction},
+			Data:    map[string]interface{}{"data": res},
 		}
 	}(ctx.Copy())
 	res := <-result

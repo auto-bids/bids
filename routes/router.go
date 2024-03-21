@@ -5,9 +5,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func auctionRoute(router *gin.Engine) {
+func AuctionRoute(router *gin.Engine) {
 	auction := router.Group("/auction")
 	{
 		auction.POST("/:email", controllers.PostAuction)
+		auction.GET("/:auctionid", controllers.GetAuction)
+		auction.PUT("/:email/:auctionid", controllers.UpdateAuction)
 	}
 }
