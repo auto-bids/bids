@@ -8,8 +8,9 @@ import (
 func AuctionRoute(router *gin.Engine) {
 	auction := router.Group("/auction")
 	{
-		auction.POST("/:email", controllers.PostAuction)
-		auction.GET("/:auctionid", controllers.GetAuction)
-		auction.PUT("/:email/:auctionid", controllers.UpdateAuction)
+		auction.POST("/addBid/:email", controllers.PostAuction)
+		auction.GET("/getBid/:auctionid", controllers.GetAuction)
+		auction.DELETE("/removeBid/:email/:auctionid", controllers.DeleteAuction)
+		auction.PUT("/editBid/:email/:auctionid", controllers.UpdateAuction)
 	}
 }

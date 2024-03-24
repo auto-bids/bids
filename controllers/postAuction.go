@@ -18,7 +18,7 @@ func PostAuction(ctx *gin.Context) {
 		ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer close(result)
 		defer cancel()
-		var res models.Auction
+		var res models.PostAuction
 		validate := validator.New(validator.WithRequiredStructEnabled())
 		err := c.ShouldBindJSON(&res)
 		if err != nil {
@@ -53,7 +53,7 @@ func PostAuction(ctx *gin.Context) {
 		result <- responses.Response{
 			Status:  http.StatusAccepted,
 			Message: "accepted",
-			Data:    map[string]interface{}{"data": one},
+			Data:    map[string]interface{}{"data": one.InsertedID},
 		}
 	}(ctx.Copy())
 	res := <-result
