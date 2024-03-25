@@ -20,7 +20,7 @@ func UpdateAuction(ctx *gin.Context) {
 		ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer close(result)
 		defer cancel()
-		var res models.Auction
+		var res models.UpdateAuction
 		validate := validator.New(validator.WithRequiredStructEnabled())
 		err := c.ShouldBindJSON(&res)
 		if err != nil {
@@ -31,7 +31,6 @@ func UpdateAuction(ctx *gin.Context) {
 			}
 			return
 		}
-		res.Owner = email
 		err = validate.Struct(res)
 		if err != nil {
 			result <- responses.Response{
