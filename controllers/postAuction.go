@@ -30,7 +30,7 @@ func PostAuction(ctx *gin.Context) {
 			return
 		}
 		res.Owner = email
-		res.Created = time.Now()
+		res.Created = time.Now().Unix()
 		err = validate.Struct(res)
 		if err != nil {
 			result <- responses.Response{

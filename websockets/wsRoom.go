@@ -14,17 +14,19 @@ type Room struct {
 	Clients    map[*Client]bool
 	Server     *Server
 	Broadcast  chan *models.Message
+	End        int64
 	Stop       chan bool
 	AddUser    chan *Client
 	RemoveUser chan *Client
 }
 
-func CreateRoom(name string, server *Server) *Room {
+func CreateRoom(name string, end int64, server *Server) *Room {
 	return &Room{
 		id:         name,
 		Server:     server,
 		Clients:    make(map[*Client]bool),
 		Broadcast:  make(chan *models.Message),
+		End:        end,
 		AddUser:    make(chan *Client),
 		RemoveUser: make(chan *Client),
 		Stop:       make(chan bool),
@@ -56,11 +58,22 @@ func (r *Room) GetClient(client string) *Client {
 	}
 	return nil
 }
+func (r *Room) endAuction() {
+	message := []byte("end")
+	for client := range r.Clients {
+		client.WriteMess <- message
+	}
+}
 func (r *Room) sendMessage(message *models.Message) {
 	//TODO
 }
 func (r *Room) RunRoom() {
+
 	for {
+		if time.Now().Unix() == r.End {
+			r.endAuction()
+			return
+		}
 		select {
 		case message := <-r.Broadcast:
 			r.sendMessage(message)
@@ -77,5 +90,4 @@ func (r *Room) RunRoom() {
 		}
 		time.Sleep(time.Millisecond)
 	}
-
 }
