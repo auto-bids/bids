@@ -4,32 +4,35 @@ import (
 	"bids/database"
 	"bids/models"
 	"context"
+	"encoding/json"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
 )
 
 type Room struct {
-	id         string
-	Clients    map[*Client]bool
-	Server     *Server
-	Broadcast  chan *models.Message
-	End        int64
-	Stop       chan bool
-	AddUser    chan *Client
-	RemoveUser chan *Client
+	id                  string
+	currentHighestOffer models.Offer
+	Clients             map[*Client]bool
+	Server              *Server
+	Broadcast           chan []byte
+	End                 int64
+	Stop                chan bool
+	AddUser             chan *Client
+	RemoveUser          chan *Client
 }
 
-func CreateRoom(name string, end int64, server *Server) *Room {
+func CreateRoom(name string, end int64, server *Server, offer models.Offer) *Room {
 	return &Room{
-		id:         name,
-		Server:     server,
-		Clients:    make(map[*Client]bool),
-		Broadcast:  make(chan *models.Message),
-		End:        end,
-		AddUser:    make(chan *Client),
-		RemoveUser: make(chan *Client),
-		Stop:       make(chan bool),
+		id:                  name,
+		currentHighestOffer: offer,
+		Clients:             make(map[*Client]bool),
+		Server:              server,
+		Broadcast:           make(chan []byte),
+		End:                 end,
+		Stop:                make(chan bool),
+		AddUser:             make(chan *Client),
+		RemoveUser:          make(chan *Client),
 	}
 }
 func (r *Room) AddClient(client *Client) {
@@ -64,8 +67,28 @@ func (r *Room) endAuction() {
 		client.WriteMess <- message
 	}
 }
-func (r *Room) sendMessage(message *models.Message) {
-	//TODO
+func (r *Room) sendOffer(data []byte) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	auctionCollection := database.GetCollection(database.DB, "auction")
+
+	offer := models.Offer{}
+	json.Unmarshal(data, &offer)
+	if offer.Price > r.currentHighestOffer.Price {
+		r.currentHighestOffer = offer
+		filter := bson.D{{"_id", primitive.ObjectIDFromHex(r.id)}}
+		update := bson.M{"$push": bson.M{"offers": offer}}
+		_, err := auctionCollection.UpdateOne(ctx, filter, update)
+		if err == nil {
+			for client := range r.Clients {
+				client.WriteMess <- data
+			}
+		} else {
+			r.GetClient(offer.Sender).WriteMess <- []byte("error")
+		}
+
+	}
+
 }
 func (r *Room) RunRoom() {
 
@@ -76,7 +99,7 @@ func (r *Room) RunRoom() {
 		}
 		select {
 		case message := <-r.Broadcast:
-			r.sendMessage(message)
+			r.sendOffer(message)
 		case user := <-r.AddUser:
 			r.AddClient(user)
 		case key := <-r.RemoveUser:

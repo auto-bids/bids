@@ -4,6 +4,7 @@ type Auction struct {
 	Id           string   `bson:"_id" json:"_id"`
 	Owner        string   `bson:"owner" json:"owner" validate:"required,email"`
 	End          int64    `bson:"end" json:"end"`
+	Start        int64    `bson:"start" json:"start"`
 	Created      int64    `bson:"created" json:"created" `
 	Bidders      []string `bson:"users" json:"users"`
 	Status       string   `bson:"status" json:"status"`

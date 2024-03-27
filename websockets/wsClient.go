@@ -22,11 +22,6 @@ const (
 	maxMessageSize = 512
 )
 
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
-)
-
 func NewClient(socket *websocket.Conn, ctx *gin.Context) *Client {
 
 	return &Client{
@@ -82,7 +77,6 @@ func (c *Client) WritePump() {
 
 			n := len(c.WriteMess)
 			for i := 0; i < n; i++ {
-				w.Write(newline)
 				w.Write(<-c.WriteMess)
 			}
 			if err := w.Close(); err != nil {
