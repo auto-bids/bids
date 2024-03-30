@@ -2,6 +2,7 @@ package main
 
 import (
 	"bids/routes"
+	"bids/websockets"
 	"github.com/gin-gonic/gin"
 	"log"
 	"os"
@@ -9,6 +10,7 @@ import (
 
 func main() {
 	app := gin.Default()
-	routes.AuctionRoute(app)
+	server := websockets.CreateServer()
+	routes.AuctionRoute(app, server)
 	log.Fatal(app.Run(":" + os.Getenv("PORT")))
 }

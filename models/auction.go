@@ -16,7 +16,7 @@ type PostAuction struct {
 	End     int64    `bson:"end" json:"end"`
 	Created int64    `bson:"created" json:"created" `
 	Bidders []string `bson:"users" json:"users"`
-	//	Car     Car      `json:"car" bson:"car" `
+	//Car     Car      `json:"car" bson:"car" `
 }
 type GetAuctionForRoom struct {
 	Owner string `bson:"owner" json:"owner" validate:"required,email"`
