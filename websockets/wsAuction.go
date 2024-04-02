@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type Room struct {
+type Auction struct {
 	id                  string
 	currentHighestOffer models.Offer
 	Clients             map[*Client]bool
@@ -22,8 +22,8 @@ type Room struct {
 	RemoveUser          chan *Client
 }
 
-func CreateRoom(name string, end int64, server *Server, offer models.Offer) *Room {
-	return &Room{
+func CreateAuction(name string, end int64, server *Server, offer models.Offer) *Auction {
+	return &Auction{
 		id:                  name,
 		currentHighestOffer: offer,
 		Clients:             make(map[*Client]bool),
@@ -35,7 +35,7 @@ func CreateRoom(name string, end int64, server *Server, offer models.Offer) *Roo
 		RemoveUser:          make(chan *Client),
 	}
 }
-func (r *Room) AddClient(client *Client) {
+func (r *Auction) AddClient(client *Client) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	roomCollection := database.GetCollection(database.DB, "rooms")
@@ -50,10 +50,10 @@ func (r *Room) AddClient(client *Client) {
 	client.WriteMess <- []byte(r.id)
 	r.Clients[client] = true
 }
-func (r *Room) RemoveClient(client *Client) {
+func (r *Auction) RemoveClient(client *Client) {
 	delete(r.Clients, client)
 }
-func (r *Room) GetClient(client string) *Client {
+func (r *Auction) GetClient(client string) *Client {
 	for i := range r.Clients {
 		if i.UserID == client {
 			return i
@@ -61,13 +61,13 @@ func (r *Room) GetClient(client string) *Client {
 	}
 	return nil
 }
-func (r *Room) endAuction() {
+func (r *Auction) endAuction() {
 	message := []byte("end")
 	for client := range r.Clients {
 		client.WriteMess <- message
 	}
 }
-func (r *Room) sendOffer(data []byte) {
+func (r *Auction) sendOffer(data []byte) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	auctionCollection := database.GetCollection(database.DB, "auction")
@@ -90,7 +90,7 @@ func (r *Room) sendOffer(data []byte) {
 	}
 
 }
-func (r *Room) RunRoom() {
+func (r *Auction) RunAuction() {
 
 	for {
 		if time.Now().Unix() == r.End {
@@ -98,15 +98,7 @@ func (r *Room) RunRoom() {
 			return
 		}
 		select {
-		case message := <-r.Broadcast:
-			r.sendOffer(message)
-		case user := <-r.AddUser:
-			r.AddClient(user)
-		case key := <-r.RemoveUser:
-			delete(r.Clients, key)
-			if len(r.Clients) == 0 {
-				return
-			}
+
 		case <-r.Stop:
 			return
 		default:

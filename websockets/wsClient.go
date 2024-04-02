@@ -71,6 +71,10 @@ func (c *Client) JoinAuction(dest string) {
 	}
 	res, _ := json.Marshal(wsRes)
 	c.WriteMess <- res
+}
+func (c *Client) makeBid(offer models.Offer) {
+	offer.Sender = c.UserID
+	offer.Time = time.Now().UnixNano()
 
 }
 func (c *Client) closeConnection() {
@@ -92,8 +96,7 @@ func (c *Client) ReadPump() {
 		case "join":
 			c.JoinAuction(mess.Destination)
 		case "bid":
-			c.makeABid(mess)
-
+			c.makeBid(mess)
 		}
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
