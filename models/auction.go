@@ -14,6 +14,7 @@ type Auction struct {
 type PostAuction struct {
 	Owner   string   `bson:"owner" json:"owner" validate:"required,email"`
 	End     int64    `bson:"end" json:"end"`
+	Start   int64    `bson:"start" json:"start"`
 	Created int64    `bson:"created" json:"created" `
 	Bidders []string `bson:"users" json:"users"`
 	//Car     Car      `json:"car" bson:"car" `
@@ -26,4 +27,8 @@ type UpdateAuction struct {
 	Id  string `bson:"_id" json:"_id"`
 	End int64  `bson:"end" json:"end" validate:"required,datetime"`
 	Car Car    `json:"car" bson:"car" validate:"required"`
+}
+type AddBidder struct {
+	Id      string   `bson:"_id" json:"_id"`
+	Bidders []string `bson:"users" json:"users"`
 }

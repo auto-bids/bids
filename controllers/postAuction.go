@@ -31,6 +31,14 @@ func PostAuction(ctx *gin.Context) {
 		}
 		res.Owner = email
 		res.Created = time.Now().Unix()
+		if res.End <= res.Created || res.End <= res.Start || res.Start <= res.Created {
+			result <- responses.Response{
+				Status:  http.StatusBadRequest,
+				Message: "end or start time not valid",
+				Data:    map[string]interface{}{"error": err.Error()},
+			}
+			return
+		}
 		err = validate.Struct(res)
 		if err != nil {
 			result <- responses.Response{

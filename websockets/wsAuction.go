@@ -71,12 +71,12 @@ func (r *Room) sendOffer(data []byte) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	auctionCollection := database.GetCollection(database.DB, "auction")
-
 	offer := models.Offer{}
 	json.Unmarshal(data, &offer)
 	if offer.Price > r.currentHighestOffer.Price {
 		r.currentHighestOffer = offer
-		filter := bson.D{{"_id", primitive.ObjectIDFromHex(r.id)}}
+		id, _ := primitive.ObjectIDFromHex(r.id)
+		filter := bson.D{{"_id", id}}
 		update := bson.M{"$push": bson.M{"offers": offer}}
 		_, err := auctionCollection.UpdateOne(ctx, filter, update)
 		if err == nil {

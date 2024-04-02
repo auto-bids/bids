@@ -1,8 +1,15 @@
 package websockets
 
 import (
+	"bids/database"
+	"bids/models"
+	"bids/responses"
+	"context"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"time"
 )
@@ -31,7 +38,41 @@ func NewClient(socket *websocket.Conn, ctx *gin.Context) *Client {
 		UserID:    ctx.Param("email"),
 	}
 }
+func (c *Client) JoinAuction(dest string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	auctionCollection := database.GetCollection(database.DB, "auctions")
+	id, _ := primitive.ObjectIDFromHex(dest)
+	filter := bson.D{{"_id", id}}
+	err := auctionCollection.FindOne(ctx, filter).Err()
+	if err != nil {
+		wsErr := responses.ResponseWs{
+			Message: "auction not found",
+			Data:    map[string]interface{}{"error": err},
+		}
+		res, _ := json.Marshal(wsErr)
+		c.WriteMess <- res
+		return
+	}
+	update := bson.M{"$push": bson.M{"users": c.UserID}}
+	updateRes, err := auctionCollection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		wsErr := responses.ResponseWs{
+			Message: "user not added",
+			Data:    map[string]interface{}{"error": err},
+		}
+		res, _ := json.Marshal(wsErr)
+		c.WriteMess <- res
+		return
+	}
+	wsRes := responses.ResponseWs{
+		Message: "user added",
+		Data:    map[string]interface{}{"data": updateRes},
+	}
+	res, _ := json.Marshal(wsRes)
+	c.WriteMess <- res
 
+}
 func (c *Client) closeConnection() {
 	delete(c.Server.Clients, c)
 }
@@ -43,7 +84,17 @@ func (c *Client) ReadPump() {
 	c.Socket.SetReadDeadline(time.Now().Add(pongWait))
 	c.Socket.SetPongHandler(func(string) error { c.Socket.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.Socket.ReadMessage()
+		_, byteMessage, err := c.Socket.ReadMessage()
+		mess := &models.Message{}
+		json.Unmarshal(byteMessage, mess)
+		mess.Sender = c.UserID
+		switch mess.Options {
+		case "join":
+			c.JoinAuction(mess.Destination)
+		case "bid":
+			c.makeABid(mess)
+
+		}
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
@@ -51,7 +102,7 @@ func (c *Client) ReadPump() {
 			}
 			break
 		}
-		c.WriteMess <- message
+
 		time.Sleep(time.Millisecond)
 	}
 }
