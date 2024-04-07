@@ -5,9 +5,9 @@ type Auction struct {
 	Owner        string   `bson:"owner" json:"owner" validate:"required,email"`
 	End          int64    `bson:"end" json:"end"`
 	Start        int64    `bson:"start" json:"start"`
-	Created      int64    `bson:"created" json:"created" `
+	Created      int64    `bson:"created" json:"created"`
 	Bidders      []string `bson:"users" json:"users"`
-	Status       string   `bson:"status" json:"status"`
+	Offers       []Offer  `bson:"offers" json:"offers"`
 	MinimalRaise float32
 	//Car          Car `json:"car" bson:"car" `
 }
