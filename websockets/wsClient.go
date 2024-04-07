@@ -44,10 +44,20 @@ func (c *Client) JoinAuction(dest string) {
 	auctionCollection := database.GetCollection(database.DB, "auctions")
 	id, _ := primitive.ObjectIDFromHex(dest)
 	filter := bson.D{{"_id", id}}
-	err := auctionCollection.FindOne(ctx, filter).Err()
+	var auction models.GetAuctionForRoom
+	err := auctionCollection.FindOne(ctx, filter).Decode(&auction)
 	if err != nil {
 		wsErr := responses.ResponseWs{
 			Message: "auction not found",
+			Data:    map[string]interface{}{"error": err},
+		}
+		res, _ := json.Marshal(wsErr)
+		c.WriteMess <- res
+		return
+	}
+	if auction.End <= time.Now().Unix() {
+		wsErr := responses.ResponseWs{
+			Message: "auction has ended",
 			Data:    map[string]interface{}{"error": err},
 		}
 		res, _ := json.Marshal(wsErr)
@@ -96,7 +106,7 @@ func (c *Client) ReadPump() {
 		case "join":
 			c.JoinAuction(mess.Destination)
 		case "bid":
-			c.makeBid(mess)
+			//c.makeBid(mess) TODO
 		}
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {

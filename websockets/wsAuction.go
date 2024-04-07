@@ -15,6 +15,7 @@ type Auction struct {
 	currentHighestOffer models.Offer
 	Clients             map[*Client]bool
 	Server              *Server
+	Offer               chan models.Offer
 	Broadcast           chan []byte
 	End                 int64
 	Stop                chan bool
@@ -28,7 +29,7 @@ func CreateAuction(name string, end int64, server *Server, offer models.Offer) *
 		currentHighestOffer: offer,
 		Clients:             make(map[*Client]bool),
 		Server:              server,
-		Broadcast:           make(chan []byte),
+		Offer:               make(chan models.Offer),
 		End:                 end,
 		Stop:                make(chan bool),
 		AddUser:             make(chan *Client),
@@ -67,12 +68,10 @@ func (r *Auction) endAuction() {
 		client.WriteMess <- message
 	}
 }
-func (r *Auction) sendOffer(data []byte) {
+func (r *Auction) sendOffer(offer models.Offer) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	auctionCollection := database.GetCollection(database.DB, "auction")
-	offer := models.Offer{}
-	json.Unmarshal(data, &offer)
 	if offer.Price > r.currentHighestOffer.Price {
 		r.currentHighestOffer = offer
 		id, _ := primitive.ObjectIDFromHex(r.id)
@@ -80,6 +79,7 @@ func (r *Auction) sendOffer(data []byte) {
 		update := bson.M{"$push": bson.M{"offers": offer}}
 		_, err := auctionCollection.UpdateOne(ctx, filter, update)
 		if err == nil {
+			data, _ := json.Marshal(offer)
 			for client := range r.Clients {
 				client.WriteMess <- data
 			}
@@ -98,7 +98,8 @@ func (r *Auction) RunAuction() {
 			return
 		}
 		select {
-
+		case offer := <-r.Offer:
+			r.sendOffer(offer)
 		case <-r.Stop:
 			return
 		default:
