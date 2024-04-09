@@ -5,6 +5,7 @@ import (
 	"bids/models"
 	"context"
 	"encoding/json"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -30,15 +31,17 @@ func CreateAuction(name string, server *Server) (*Auction, error) {
 	auctionCollection := database.GetCollection(database.DB, "auctions")
 	id, _ := primitive.ObjectIDFromHex(name)
 	filter := bson.D{{"_id", id}}
-	opts := options.FindOne().SetProjection(bson.D{{"end", 1}, {}}).SetSort(bson.D{{"offers", 1}})
-	auctionCollection.FindOne(ctx, filter)
+	opts := options.FindOne().SetProjection(bson.D{{"end", 1}, {"offers", 1}}).SetSort(bson.D{{"offers", 1}})
+	var auction models.GetAuctionForRoom
+	auctionCollection.FindOne(ctx, filter, opts).Decode(&auction)
+	mockOffer := models.Offer{Time: time.Now().UnixNano(), Sender: "a@a.pl", Price: 100}
 	return &Auction{
 		id:                  name,
-		currentHighestOffer: offer,
+		currentHighestOffer: mockOffer,
 		Clients:             make(map[*Client]bool),
 		Server:              server,
 		Offer:               make(chan models.Offer),
-		End:                 end,
+		End:                 auction.End,
 		Stop:                make(chan bool),
 		AddUser:             make(chan *Client),
 		RemoveUser:          make(chan *Client),
@@ -49,10 +52,12 @@ func (r *Auction) AddClient(client *Client) {
 	defer cancel()
 	auctionCollection := database.GetCollection(database.DB, "auctions")
 	id, _ := primitive.ObjectIDFromHex(r.id)
-	filter := bson.D{{"_id", id}, {"users", client.UserID}}
-	err := auctionCollection.FindOne(ctx, filter).Err()
+	filter := bson.D{{"_id", id}}
+	update := bson.M{"$push": bson.M{"bidders": client.UserID}}
+	_, err := auctionCollection.UpdateOne(ctx, filter, update)
+	fmt.Println(err)
 	if err != nil {
-		client.WriteMess <- []byte("unauthorized")
+		client.WriteMess <- []byte("not added")
 		return
 	}
 	client.WriteMess <- []byte(r.id)
@@ -78,7 +83,7 @@ func (r *Auction) endAuction() {
 func (r *Auction) sendOffer(offer models.Offer) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	auctionCollection := database.GetCollection(database.DB, "auction")
+	auctionCollection := database.GetCollection(database.DB, "auctions")
 	if offer.Price > r.currentHighestOffer.Price {
 		r.currentHighestOffer = offer
 		id, _ := primitive.ObjectIDFromHex(r.id)
@@ -91,6 +96,7 @@ func (r *Auction) sendOffer(offer models.Offer) {
 				client.WriteMess <- data
 			}
 		} else {
+
 			r.GetClient(offer.Sender).WriteMess <- []byte("error")
 		}
 
@@ -107,6 +113,8 @@ func (r *Auction) RunAuction() {
 		select {
 		case offer := <-r.Offer:
 			r.sendOffer(offer)
+		case user := <-r.AddUser:
+			r.AddClient(user)
 		case <-r.Stop:
 			return
 		default:

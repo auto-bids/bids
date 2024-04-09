@@ -25,17 +25,19 @@ func PostAuction(ctx *gin.Context) {
 			result <- responses.Response{
 				Status:  http.StatusBadRequest,
 				Message: "Invalid request body",
-				Data:    map[string]interface{}{"error": err.Error()},
+				Data:    map[string]interface{}{"error": err},
 			}
 			return
 		}
 		res.Owner = email
 		res.Created = time.Now().Unix()
+		res.Bidders = []string{}
+		res.Offers = []models.Offer{}
 		if res.End <= res.Created || res.End <= res.Start || res.Start <= res.Created {
 			result <- responses.Response{
 				Status:  http.StatusBadRequest,
 				Message: "end or start time not valid",
-				Data:    map[string]interface{}{"error": err.Error()},
+				Data:    map[string]interface{}{"error": res},
 			}
 			return
 		}
@@ -44,7 +46,7 @@ func PostAuction(ctx *gin.Context) {
 			result <- responses.Response{
 				Status:  http.StatusBadRequest,
 				Message: "validation failed",
-				Data:    map[string]interface{}{"error": err.Error()},
+				Data:    map[string]interface{}{"error": err},
 			}
 			return
 		}
@@ -54,7 +56,7 @@ func PostAuction(ctx *gin.Context) {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,
 				Message: "Error adding auction",
-				Data:    map[string]interface{}{"error": err.Error()},
+				Data:    map[string]interface{}{"error": err},
 			}
 			return
 		}

@@ -6,10 +6,12 @@ import (
 	"bids/responses"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"time"
 )
@@ -18,6 +20,7 @@ type Client struct {
 	Socket    *websocket.Conn
 	WriteMess chan []byte
 	Server    *Server
+	Auctions  map[string]*Auction
 	UserID    string
 	Close     chan string
 }
@@ -30,11 +33,11 @@ const (
 )
 
 func NewClient(socket *websocket.Conn, ctx *gin.Context) *Client {
-
 	return &Client{
 		Socket:    socket,
 		Close:     make(chan string),
 		WriteMess: make(chan []byte),
+		Auctions:  make(map[string]*Auction),
 		UserID:    ctx.Param("email"),
 	}
 }
@@ -45,7 +48,7 @@ func (c *Client) JoinAuction(dest string) {
 	id, _ := primitive.ObjectIDFromHex(dest)
 	filter := bson.D{{"_id", id}}
 	var auction models.GetAuctionForRoom
-	err := auctionCollection.FindOne(ctx, filter).Decode(&auction)
+	err := auctionCollection.FindOne(ctx, filter, options.FindOne().SetProjection(bson.D{{"end", 1}})).Decode(&auction)
 	if err != nil {
 		wsErr := responses.ResponseWs{
 			Message: "auction not found",
@@ -64,7 +67,7 @@ func (c *Client) JoinAuction(dest string) {
 		c.WriteMess <- res
 		return
 	}
-	update := bson.M{"$push": bson.M{"users": c.UserID}}
+	update := bson.M{"$push": bson.M{"bidders": c.UserID}}
 	updateRes, err := auctionCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		wsErr := responses.ResponseWs{
@@ -75,6 +78,12 @@ func (c *Client) JoinAuction(dest string) {
 		c.WriteMess <- res
 		return
 	}
+	auctionServer := c.Server.GetAuction(dest)
+	if auctionServer == nil {
+		auctionServer, _ = c.Server.AddAuction(dest)
+	}
+	c.Auctions[auctionServer.id] = auctionServer
+	auctionServer.AddUser <- c
 	wsRes := responses.ResponseWs{
 		Message: "user added",
 		Data:    map[string]interface{}{"data": updateRes},
@@ -82,10 +91,15 @@ func (c *Client) JoinAuction(dest string) {
 	res, _ := json.Marshal(wsRes)
 	c.WriteMess <- res
 }
-func (c *Client) makeBid(offer models.Offer) {
+func (c *Client) makeBid(mess *models.Message) {
+	offer := mess.Offer
 	offer.Sender = c.UserID
 	offer.Time = time.Now().UnixNano()
-
+	fmt.Println("asd")
+	if c.Auctions[mess.Destination] != nil {
+		fmt.Println("asd")
+		c.Auctions[mess.Destination].Offer <- offer
+	}
 }
 func (c *Client) closeConnection() {
 	delete(c.Server.Clients, c)
@@ -99,6 +113,13 @@ func (c *Client) ReadPump() {
 	c.Socket.SetPongHandler(func(string) error { c.Socket.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
 		_, byteMessage, err := c.Socket.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("error: %v", err)
+				c.closeConnection()
+			}
+			break
+		}
 		mess := &models.Message{}
 		json.Unmarshal(byteMessage, mess)
 		mess.Sender = c.UserID
@@ -106,14 +127,7 @@ func (c *Client) ReadPump() {
 		case "join":
 			c.JoinAuction(mess.Destination)
 		case "bid":
-			//c.makeBid(mess) TODO
-		}
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
-				c.closeConnection()
-			}
-			break
+			c.makeBid(mess) //TODO
 		}
 
 		time.Sleep(time.Millisecond)
@@ -138,7 +152,6 @@ func (c *Client) WritePump() {
 				return
 			}
 			w.Write(message)
-
 			n := len(c.WriteMess)
 			for i := 0; i < n; i++ {
 				w.Write(<-c.WriteMess)

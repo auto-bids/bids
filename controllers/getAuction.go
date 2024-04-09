@@ -6,8 +6,8 @@ import (
 	"bids/responses"
 	"context"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 	"time"
 )
@@ -20,19 +20,10 @@ func GetAuction(ctx *gin.Context) {
 		defer close(result)
 		defer cancel()
 		var auction models.Auction
-		validate := validator.New(validator.WithRequiredStructEnabled())
-		err := validate.Struct(auction)
-		if err != nil {
-			result <- responses.Response{
-				Status:  http.StatusBadRequest,
-				Message: "validation failed",
-				Data:    map[string]interface{}{"error": err.Error()},
-			}
-			return
-		}
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		filter := bson.D{{"_id", auctionID}}
-		auctionsCollection.FindOne(ctxDB, filter).Decode(&auction)
+		id, _ := primitive.ObjectIDFromHex(auctionID)
+		filter := bson.D{{"_id", id}}
+		err := auctionsCollection.FindOne(ctxDB, filter).Decode(&auction)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,

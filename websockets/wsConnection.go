@@ -20,6 +20,7 @@ func ManageWs(server *Server, ctx *gin.Context) {
 	ws, err := Upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
 	client := NewClient(ws, ctx)
 	server.AddClient(client)
+	client.Server = server
 	if err != nil {
 		connectionError := responses.Response{
 			Status:  http.StatusBadRequest,
@@ -29,5 +30,6 @@ func ManageWs(server *Server, ctx *gin.Context) {
 		ctx.JSON(connectionError.Status, connectionError)
 		return
 	}
-
+	go client.ReadPump()
+	go client.WritePump()
 }
