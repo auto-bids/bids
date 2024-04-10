@@ -5,7 +5,6 @@ import (
 	"bids/models"
 	"context"
 	"encoding/json"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -48,18 +47,6 @@ func CreateAuction(name string, server *Server) (*Auction, error) {
 	}, nil
 }
 func (r *Auction) AddClient(client *Client) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	auctionCollection := database.GetCollection(database.DB, "auctions")
-	id, _ := primitive.ObjectIDFromHex(r.id)
-	filter := bson.D{{"_id", id}}
-	update := bson.M{"$push": bson.M{"bidders": client.UserID}}
-	_, err := auctionCollection.UpdateOne(ctx, filter, update)
-	fmt.Println(err)
-	if err != nil {
-		client.WriteMess <- []byte("not added")
-		return
-	}
 	client.WriteMess <- []byte(r.id)
 	r.Clients[client] = true
 }

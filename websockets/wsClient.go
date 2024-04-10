@@ -49,6 +49,7 @@ func (c *Client) JoinAuction(dest string) {
 	filter := bson.D{{"_id", id}}
 	var auction models.GetAuctionForRoom
 	err := auctionCollection.FindOne(ctx, filter, options.FindOne().SetProjection(bson.D{{"end", 1}})).Decode(&auction)
+	fmt.Println(auction)
 	if err != nil {
 		wsErr := responses.ResponseWs{
 			Message: "auction not found",
@@ -67,7 +68,7 @@ func (c *Client) JoinAuction(dest string) {
 		c.WriteMess <- res
 		return
 	}
-	update := bson.M{"$push": bson.M{"bidders": c.UserID}}
+	update := bson.M{"$addToSet": bson.M{"bidders": c.UserID}}
 	updateRes, err := auctionCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		wsErr := responses.ResponseWs{
