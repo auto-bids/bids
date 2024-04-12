@@ -48,7 +48,7 @@ func (c *Client) JoinAuction(dest string) {
 	id, _ := primitive.ObjectIDFromHex(dest)
 	filter := bson.D{{"_id", id}}
 	var auction models.GetAuctionForRoom
-	err := auctionCollection.FindOne(ctx, filter, options.FindOne().SetProjection(bson.D{{"end", 1}})).Decode(&auction)
+	err := auctionCollection.FindOne(ctx, filter, options.FindOne().SetProjection(bson.D{{"end", 1}, {"start", 1}})).Decode(&auction)
 	fmt.Println(auction)
 	if err != nil {
 		wsErr := responses.ResponseWs{
@@ -59,10 +59,19 @@ func (c *Client) JoinAuction(dest string) {
 		c.WriteMess <- res
 		return
 	}
-	if auction.End <= time.Now().Unix() {
+	if auction.End < time.Now().Unix() {
 		wsErr := responses.ResponseWs{
 			Message: "auction has ended",
-			Data:    map[string]interface{}{"error": err},
+			Data:    map[string]interface{}{"error": "ended"},
+		}
+		res, _ := json.Marshal(wsErr)
+		c.WriteMess <- res
+		return
+	}
+	if auction.Start > time.Now().Unix() {
+		wsErr := responses.ResponseWs{
+			Message: "auction has not started yet",
+			Data:    map[string]interface{}{"error": "notStarted"},
 		}
 		res, _ := json.Marshal(wsErr)
 		c.WriteMess <- res

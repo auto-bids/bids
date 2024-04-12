@@ -24,6 +24,7 @@ type GetAuctionForRoom struct {
 	Owner  string  `bson:"owner" json:"owner" validate:"required,email"`
 	Offers []Offer `bson:"offers" json:"offers"`
 	End    int64   `bson:"end" json:"end"`
+	Start  int64   `bson:"end" json:"end"`
 }
 type UpdateAuction struct {
 	Id  string `bson:"_id" json:"_id"`

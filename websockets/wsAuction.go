@@ -5,9 +5,9 @@ import (
 	"bids/models"
 	"context"
 	"encoding/json"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
 
@@ -25,22 +25,30 @@ type Auction struct {
 }
 
 func CreateAuction(name string, server *Server) (*Auction, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	auctionCollection := database.GetCollection(database.DB, "auctions")
 	id, _ := primitive.ObjectIDFromHex(name)
-	filter := bson.D{{"_id", id}}
-	opts := options.FindOne().SetProjection(bson.D{{"end", 1}, {"offers", 1}}).SetSort(bson.D{{"offers", 1}})
-	var auction models.GetAuctionForRoom
-	auctionCollection.FindOne(ctx, filter, opts).Decode(&auction)
-	mockOffer := models.Offer{Time: time.Now().UnixNano(), Sender: "a@a.pl", Price: 100}
+	var auction []models.Auction
+	stages := bson.A{
+		bson.D{{"$match", bson.D{{"_id", id}}}},
+		bson.D{{"$unwind", "$offers"}},
+		bson.D{{"$sort", bson.D{{"offers.offer", 1}}}},
+		bson.D{{"$limit", 1}},
+		bson.D{{"$group", bson.D{{"_id", "$_id"}, {"offers", bson.D{{"$push", "$offers"}}}}}},
+	}
+	cursor, err := auctionCollection.Aggregate(ctxDB, stages)
+	if err = cursor.All(ctxDB, &auction); err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(auction)
 	return &Auction{
 		id:                  name,
-		currentHighestOffer: mockOffer,
+		currentHighestOffer: auction[0].Offers[0],
 		Clients:             make(map[*Client]bool),
 		Server:              server,
 		Offer:               make(chan models.Offer),
-		End:                 auction.End,
+		End:                 auction[0].End,
 		Stop:                make(chan bool),
 		AddUser:             make(chan *Client),
 		RemoveUser:          make(chan *Client),
