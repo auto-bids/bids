@@ -90,7 +90,7 @@ func (c *Client) JoinAuction(dest string) {
 	}
 	auctionServer := c.Server.GetAuction(dest)
 	if auctionServer == nil {
-		auctionServer, _ = c.Server.AddAuction(dest)
+		auctionServer, _ = c.Server.AddAuction(dest, auction.End)
 	}
 	c.Auctions[auctionServer.id] = auctionServer
 	auctionServer.AddUser <- c

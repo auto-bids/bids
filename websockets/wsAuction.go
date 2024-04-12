@@ -24,7 +24,7 @@ type Auction struct {
 	RemoveUser          chan *Client
 }
 
-func CreateAuction(name string, server *Server) (*Auction, error) {
+func CreateAuction(name string, end int64, server *Server) (*Auction, error) {
 	ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	auctionCollection := database.GetCollection(database.DB, "auctions")
@@ -32,8 +32,8 @@ func CreateAuction(name string, server *Server) (*Auction, error) {
 	var auction []models.Auction
 	stages := bson.A{
 		bson.D{{"$match", bson.D{{"_id", id}}}},
-		bson.D{{"$unwind", "$offers"}},
-		bson.D{{"$sort", bson.D{{"offers.offer", 1}}}},
+		bson.D{{"$unwind", bson.D{{"path", "$offers"}, {"preserveNullAndEmptyArrays", true}}}},
+		bson.D{{"$sort", bson.D{{"offers.offer", -1}}}},
 		bson.D{{"$limit", 1}},
 		bson.D{{"$group", bson.D{{"_id", "$_id"}, {"offers", bson.D{{"$push", "$offers"}}}}}},
 	}
@@ -42,13 +42,17 @@ func CreateAuction(name string, server *Server) (*Auction, error) {
 		fmt.Println(err)
 	}
 	fmt.Println(auction)
+	hoffer := models.Offer{}
+	if len(auction[0].Offers) != 0 {
+		hoffer = auction[0].Offers[0]
+	}
 	return &Auction{
 		id:                  name,
-		currentHighestOffer: auction[0].Offers[0],
+		currentHighestOffer: hoffer,
 		Clients:             make(map[*Client]bool),
 		Server:              server,
 		Offer:               make(chan models.Offer),
-		End:                 auction[0].End,
+		End:                 end,
 		Stop:                make(chan bool),
 		AddUser:             make(chan *Client),
 		RemoveUser:          make(chan *Client),

@@ -5,6 +5,7 @@ import (
 	"bids/models"
 	"bids/responses"
 	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,11 +20,24 @@ func GetAuction(ctx *gin.Context) {
 		ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer close(result)
 		defer cancel()
-		var auction models.Auction
+		//var auction models.Auction
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
 		id, _ := primitive.ObjectIDFromHex(auctionID)
-		filter := bson.D{{"_id", id}}
-		err := auctionsCollection.FindOne(ctxDB, filter).Decode(&auction)
+		var auction []models.Auction
+		stages := bson.A{
+			bson.D{{"$match", bson.D{{"_id", id}}}},
+			bson.D{{"$unwind", bson.D{{"path", "$offers"}, {"preserveNullAndEmptyArrays", true}}}},
+			bson.D{{"$sort", bson.D{{"offers.offer", 1}}}},
+			bson.D{{"$limit", 1}},
+			bson.D{{"$group", bson.D{{"_id", "$_id"}, {"offers", bson.D{{"$push", "$offers"}}}}}},
+		}
+		cursor, err := auctionsCollection.Aggregate(ctxDB, stages)
+		if err = cursor.All(ctxDB, &auction); err != nil {
+			fmt.Println(err)
+		}
+		//filter := bson.D{{"_id", id}}
+		//opts := options.FindOne().SetProjection(bson.D{{"_id", 1}, {"start", 1}, {"end", 1}, {"offers", bson.D{{"$elemMatch", bson.D{{"offer", bson.D{{"$max", bson.D{{"$max", "$offer"}}}}}}}}}})
+		//err := auctionsCollection.FindOne(ctxDB, filter, opts).Decode(&auction)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,

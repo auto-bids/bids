@@ -32,10 +32,10 @@ func (s *Server) GetAuction(id string) *Auction {
 	}
 	return s.Auctions[id]
 }
-func (s *Server) AddAuction(id string) (*Auction, error) {
+func (s *Server) AddAuction(id string, end int64) (*Auction, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
-	auct, err := CreateAuction(id, s)
+	auct, err := CreateAuction(id, end, s)
 	if err != nil {
 		return nil, err
 	}

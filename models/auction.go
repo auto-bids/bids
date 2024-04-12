@@ -11,6 +11,7 @@ type Auction struct {
 	MinimalRaise float32
 	//Car          Car `json:"car" bson:"car" `
 }
+
 type PostAuction struct {
 	Owner   string   `bson:"owner" json:"owner" validate:"required,email"`
 	End     int64    `bson:"end" json:"end"`
@@ -24,7 +25,7 @@ type GetAuctionForRoom struct {
 	Owner  string  `bson:"owner" json:"owner" validate:"required,email"`
 	Offers []Offer `bson:"offers" json:"offers"`
 	End    int64   `bson:"end" json:"end"`
-	Start  int64   `bson:"end" json:"end"`
+	Start  int64   `bson:"start" json:"start"`
 }
 type UpdateAuction struct {
 	Id  string `bson:"_id" json:"_id"`
