@@ -8,18 +8,18 @@ type Auction struct {
 	Created      int64    `bson:"created" json:"created"`
 	Bidders      []string `bson:"bidders" json:"bidders"`
 	Offers       []Offer  `bson:"offers" json:"offers"`
-	MinimalRaise float32
-	//Car          Car `json:"car" bson:"car" `
+	MinimalRaise float32  `bson:"minimalRaise" json:"minimalRaise"`
+	Car          Car      `json:"car" bson:"car" `
 }
 
 type PostAuction struct {
 	Owner   string   `bson:"owner" json:"owner" validate:"required,email"`
-	End     int64    `bson:"end" json:"end"`
-	Start   int64    `bson:"start" json:"start"`
+	End     int64    `bson:"end" json:"end" validate:"required"`
+	Start   int64    `bson:"start" json:"start" validate:"required"`
 	Created int64    `bson:"created" json:"created" `
 	Bidders []string `bson:"bidders" json:"bidders"`
 	Offers  []Offer  `bson:"offers" json:"offers"`
-	//Car     Car      `json:"car" bson:"car" `
+	Car     Car      `json:"car" bson:"car" validate:"required"`
 }
 type GetAuctionForRoom struct {
 	Owner  string  `bson:"owner" json:"owner" validate:"required,email"`

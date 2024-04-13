@@ -3,31 +3,43 @@ package controllers
 import (
 	"bids/database"
 	"bids/models"
+	"bids/queries"
 	"bids/responses"
 	"context"
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 	"time"
 )
 
-func GetAuction(ctx *gin.Context) {
+func GetAllAuctions(ctx *gin.Context) {
 	result := make(chan responses.Response)
 	go func(c *gin.Context) {
-		auctionID := c.Param("auctionid")
+		//page := c.Param("page")
 		ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		var car models.CarSearch
+		err := c.ShouldBindJSON(&car)
+		if err != nil {
+			return
+		}
+		filter := queries.GetOfferQuery(car)
 		defer close(result)
 		defer cancel()
-		var auction models.Auction
+		var auction []models.Auction
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		id, _ := primitive.ObjectIDFromHex(auctionID)
-		filter := bson.D{{"_id", id}}
-		err := auctionsCollection.FindOne(ctxDB, filter).Decode(&auction)
+
+		res, err := auctionsCollection.Find(ctxDB, filter)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,
 				Message: "Error adding auction",
+				Data:    map[string]interface{}{"error": err.Error()},
+			}
+			return
+		}
+		if err := res.All(ctx, &auction); err != nil {
+			result <- responses.Response{
+				Status:  http.StatusInternalServerError,
+				Message: "Error decoding offers",
 				Data:    map[string]interface{}{"error": err.Error()},
 			}
 			return
