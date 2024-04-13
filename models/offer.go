@@ -5,6 +5,3 @@ type Offer struct {
 	Price  float32 `bson:"offer" json:"offer"`
 	Time   int64   `bson:"time" json:"time"`
 }
-type MessageUnwindDB struct {
-	Messages Offer `bson:"messages" json:"messages"`
-}

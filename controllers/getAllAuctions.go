@@ -7,27 +7,45 @@ import (
 	"bids/responses"
 	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 func GetAllAuctions(ctx *gin.Context) {
 	result := make(chan responses.Response)
 	go func(c *gin.Context) {
-		//page := c.Param("page")
+		page, _ := strconv.ParseInt(c.Param("page"), 10, 64)
+		order, _ := strconv.ParseInt(c.Query("order"), 10, 8)
+		by := c.Query("sortby")
+		sort := models.Sort{Order: order, By: by}
 		ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer close(result)
+		defer cancel()
+		validate := validator.New(validator.WithRequiredStructEnabled())
+		if err := validate.Struct(sort); err != nil {
+			result <- responses.Response{
+				Status:  http.StatusInternalServerError,
+				Message: "Error validation sort query",
+				Data:    map[string]interface{}{"error": err.Error()},
+			}
+			return
+		}
 		var car models.CarSearch
 		err := c.ShouldBindJSON(&car)
 		if err != nil {
 			return
 		}
 		filter := queries.GetOfferQuery(car)
-		defer close(result)
-		defer cancel()
+
 		var auction []models.Auction
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-
-		res, err := auctionsCollection.Find(ctxDB, filter)
+		opts := options.Find().SetLimit(page * 10)
+		opts.SetSort(bson.D{{"car." + sort.By, sort.Order}})
+		res, err := auctionsCollection.Find(ctxDB, filter, opts)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,
@@ -39,7 +57,7 @@ func GetAllAuctions(ctx *gin.Context) {
 		if err := res.All(ctx, &auction); err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,
-				Message: "Error decoding offers",
+				Message: "Error decoding auctions",
 				Data:    map[string]interface{}{"error": err.Error()},
 			}
 			return
