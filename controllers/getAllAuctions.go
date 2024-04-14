@@ -19,7 +19,7 @@ func GetAllAuctions(ctx *gin.Context) {
 	result := make(chan responses.Response)
 	go func(c *gin.Context) {
 		page, _ := strconv.ParseInt(c.Param("page"), 10, 64)
-		order, _ := strconv.ParseInt(c.Query("order"), 10, 8)
+		order := c.Query("order")
 		by := c.Query("sortby")
 		sort := models.Sort{Order: order, By: by}
 		ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -43,13 +43,23 @@ func GetAllAuctions(ctx *gin.Context) {
 
 		var auction []models.Auction
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		opts := options.Find().SetLimit(page * 10)
-		opts.SetSort(bson.D{{"car." + sort.By, sort.Order}})
+		opts := options.Find().SetSkip(page * 10).SetLimit(page*10 + 10)
+		if sort.By != "" || sort.Order != "" {
+			var orderi int8
+			switch order {
+			case "desc":
+				orderi = -1
+			case "asc":
+				orderi = 1
+
+			}
+			opts.SetSort(bson.D{{"car." + sort.By, orderi}})
+		}
 		res, err := auctionsCollection.Find(ctxDB, filter, opts)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,
-				Message: "Error adding auction",
+				Message: "Error searching auction",
 				Data:    map[string]interface{}{"error": err.Error()},
 			}
 			return
