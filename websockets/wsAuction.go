@@ -3,6 +3,7 @@ package websockets
 import (
 	"bids/database"
 	"bids/models"
+	"bids/responses"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -41,7 +42,6 @@ func CreateAuction(name string, end int64, server *Server) (*Auction, error) {
 	if err = cursor.All(ctxDB, &auction); err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(auction)
 	hoffer := models.Offer{}
 	if len(auction[0].Offers) != 0 {
 		hoffer = auction[0].Offers[0]
@@ -64,6 +64,7 @@ func (r *Auction) AddClient(client *Client) {
 }
 func (r *Auction) RemoveClient(client *Client) {
 	delete(r.Clients, client)
+	fmt.Println()
 }
 func (r *Auction) GetClient(client string) *Client {
 	for i := range r.Clients {
@@ -99,11 +100,13 @@ func (r *Auction) sendOffer(offer models.Offer) {
 			r.GetClient(offer.Sender).WriteMess <- []byte("error")
 		}
 
+	} else {
+		mess, _ := json.Marshal(responses.ResponseWs{Message: "offer too low"})
+		r.GetClient(offer.Sender).WriteMess <- mess
 	}
 
 }
 func (r *Auction) RunAuction() {
-
 	for {
 		if time.Now().Unix() == r.End {
 			r.endAuction()
@@ -114,10 +117,17 @@ func (r *Auction) RunAuction() {
 			r.sendOffer(offer)
 		case user := <-r.AddUser:
 			r.AddClient(user)
+		case user := <-r.RemoveUser:
+			r.RemoveClient(user)
+			if len(r.Clients) == 0 {
+				r.Server.RemoveAuction(r.id)
+				return
+			}
 		case <-r.Stop:
 			return
 		default:
 		}
-		time.Sleep(time.Millisecond)
+		time.Sleep(time.Microsecond * 500)
 	}
+
 }

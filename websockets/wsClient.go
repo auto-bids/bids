@@ -49,7 +49,6 @@ func (c *Client) JoinAuction(dest string) {
 	filter := bson.D{{"_id", id}}
 	var auction models.GetAuctionForRoom
 	err := auctionCollection.FindOne(ctx, filter, options.FindOne().SetProjection(bson.D{{"end", 1}, {"start", 1}})).Decode(&auction)
-	fmt.Println(auction)
 	if err != nil {
 		wsErr := responses.ResponseWs{
 			Message: "auction not found",
@@ -90,7 +89,8 @@ func (c *Client) JoinAuction(dest string) {
 	}
 	auctionServer := c.Server.GetAuction(dest)
 	if auctionServer == nil {
-		auctionServer, _ = c.Server.AddAuction(dest, auction.End)
+		c.Server.AddAuction(dest, auction.End)
+		auctionServer = c.Server.GetAuction(dest)
 	}
 	c.Auctions[auctionServer.id] = auctionServer
 	auctionServer.AddUser <- c
@@ -98,21 +98,22 @@ func (c *Client) JoinAuction(dest string) {
 		Message: "user added",
 		Data:    map[string]interface{}{"data": updateRes},
 	}
-	res, _ := json.Marshal(wsRes)
+	res, _ := json.Marshal(&wsRes)
 	c.WriteMess <- res
 }
 func (c *Client) makeBid(mess *models.Message) {
 	offer := mess.Offer
 	offer.Sender = c.UserID
 	offer.Time = time.Now().UnixNano()
-	fmt.Println("asd")
 	if c.Auctions[mess.Destination] != nil {
-		fmt.Println("asd")
 		c.Auctions[mess.Destination].Offer <- offer
 	}
 }
 func (c *Client) closeConnection() {
-	delete(c.Server.Clients, c)
+	for _, v := range c.Auctions {
+		v.RemoveUser <- c
+	}
+	c.Server.RemoveClient(c.UserID)
 }
 func (c *Client) ReadPump() {
 	defer func() {
@@ -126,6 +127,9 @@ func (c *Client) ReadPump() {
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
+				fmt.Println("DZIAŁA ZAMKNIĘCIE")
+				fmt.Println("c: ", len(c.Server.Clients))
+				fmt.Println("s: ", len(c.Server.Auctions))
 				c.closeConnection()
 			}
 			break
@@ -137,9 +141,8 @@ func (c *Client) ReadPump() {
 		case "join":
 			c.JoinAuction(mess.Destination)
 		case "bid":
-			c.makeBid(mess) //TODO
+			c.makeBid(mess)
 		}
-
 		time.Sleep(time.Millisecond)
 	}
 }
