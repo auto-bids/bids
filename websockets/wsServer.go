@@ -1,7 +1,6 @@
 package websockets
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -21,7 +20,6 @@ func (s *Server) RemoveAuction(id string) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	delete(s.Auctions, id)
-	fmt.Println("sa: ", len(s.Auctions), s.Auctions[id])
 }
 func (s *Server) AddClient(client *Client) {
 	s.Mutex.Lock()
@@ -45,7 +43,6 @@ func (s *Server) AddAuction(id string, end int64) (*Auction, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	auct, err := CreateAuction(id, end, s)
-	fmt.Println(auct)
 	if err != nil {
 		return nil, err
 	}

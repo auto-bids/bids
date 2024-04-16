@@ -15,7 +15,7 @@ import (
 type Auction struct {
 	id                  string
 	currentHighestOffer models.Offer
-	minimalRaise        float32
+	minimalRaise        int64
 	Clients             map[*Client]bool
 	Server              *Server
 	Offer               chan models.Offer

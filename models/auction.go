@@ -8,18 +8,19 @@ type Auction struct {
 	Created      int64    `bson:"created" json:"created"`
 	Bidders      []string `bson:"bidders" json:"bidders"`
 	Offers       []Offer  `bson:"offers" json:"offers"`
-	MinimalRaise float32  `bson:"minimalRaise" json:"minimalRaise"`
+	MinimalRaise int64    `bson:"minimalRaise" json:"minimalRaise"`
 	Car          Car      `json:"car" bson:"car" `
 }
 
 type PostAuction struct {
-	Owner   string   `bson:"owner" json:"owner" validate:"required,email"`
-	End     int64    `bson:"end" json:"end" validate:"required"`
-	Start   int64    `bson:"start" json:"start" validate:"required"`
-	Created int64    `bson:"created" json:"created" `
-	Bidders []string `bson:"bidders" json:"bidders"`
-	Offers  []Offer  `bson:"offers" json:"offers"`
-	Car     Car      `json:"car" bson:"car" validate:"required"`
+	Owner        string   `bson:"owner" json:"owner" validate:"required,email"`
+	End          int64    `bson:"end" json:"end" validate:"required"`
+	Start        int64    `bson:"start" json:"start" validate:"required"`
+	Created      int64    `bson:"created" json:"created" `
+	Bidders      []string `bson:"bidders" json:"bidders"`
+	Offers       []Offer  `bson:"offers" json:"offers"`
+	MinimalRaise int64    `bson:"minimalRaise" json:"minimalRaise"`
+	Car          Car      `json:"car" bson:"car" validate:"required"`
 }
 type GetAuctionShort struct {
 	Id      string   `bson:"_id" json:"_id"`

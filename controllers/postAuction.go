@@ -5,6 +5,7 @@ import (
 	"bids/models"
 	"bids/responses"
 	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"net/http"
@@ -33,6 +34,7 @@ func PostAuction(ctx *gin.Context) {
 		res.Created = time.Now().Unix()
 		res.Bidders = []string{}
 		res.Offers = []models.Offer{}
+		fmt.Println("mr", res.MinimalRaise)
 		if res.End <= res.Created || res.End <= res.Start || res.Start <= res.Created {
 			result <- responses.Response{
 				Status:  http.StatusBadRequest,
