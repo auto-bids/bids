@@ -43,7 +43,6 @@ type UpdateAuction struct {
 	Car Car    `json:"car" bson:"car" validate:"required"`
 }
 
-type AddBidder struct {
-	Id      string   `bson:"_id" json:"_id"`
-	Bidders []string `bson:"bidders" json:"bidders"`
+type Status struct {
+	Status string `bson:"status" json:"status" validate:"omitempty,oneof=ended ongoing"`
 }

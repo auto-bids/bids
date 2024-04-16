@@ -5,3 +5,6 @@ type Offer struct {
 	Price  float32 `bson:"offer" json:"offer"`
 	Time   int64   `bson:"time" json:"time"`
 }
+type OfferUnwind struct {
+	Offers Offer `json:"offers" bson:"offers"`
+}

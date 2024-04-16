@@ -15,6 +15,7 @@ import (
 type Auction struct {
 	id                  string
 	currentHighestOffer models.Offer
+	minimalRaise        float32
 	Clients             map[*Client]bool
 	Server              *Server
 	Offer               chan models.Offer
@@ -33,10 +34,21 @@ func CreateAuction(name string, end int64, server *Server) (*Auction, error) {
 	var auction []models.Auction
 	stages := bson.A{
 		bson.D{{"$match", bson.D{{"_id", id}}}},
-		bson.D{{"$unwind", bson.D{{"path", "$offers"}, {"preserveNullAndEmptyArrays", true}}}},
-		bson.D{{"$sort", bson.D{{"offers.offer", -1}}}},
-		bson.D{{"$limit", 1}},
-		bson.D{{"$group", bson.D{{"_id", "$_id"}, {"offers", bson.D{{"$push", "$offers"}}}}}},
+		bson.D{
+			{"$project", bson.D{
+				{"_id", "$_id"},
+				{"minimalRaise", "$minimalRaise"},
+				{"offers", bson.D{
+					{"$filter", bson.D{
+						{"input", "$offers"},
+						{"as", "item"},
+						{"cond", bson.D{
+							{"$eq", bson.A{"$$item.offer", bson.M{"$max": "$offers.offer"}}},
+						},
+						}},
+					}},
+				}},
+			}},
 	}
 	cursor, err := auctionCollection.Aggregate(ctxDB, stages)
 	if err = cursor.All(ctxDB, &auction); err != nil {
@@ -46,9 +58,11 @@ func CreateAuction(name string, end int64, server *Server) (*Auction, error) {
 	if len(auction[0].Offers) != 0 {
 		hoffer = auction[0].Offers[0]
 	}
+	minimalRaise := auction[0].MinimalRaise
 	return &Auction{
 		id:                  name,
 		currentHighestOffer: hoffer,
+		minimalRaise:        minimalRaise,
 		Clients:             make(map[*Client]bool),
 		Server:              server,
 		Offer:               make(chan models.Offer),
@@ -84,7 +98,7 @@ func (r *Auction) sendOffer(offer models.Offer) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	auctionCollection := database.GetCollection(database.DB, "auctions")
-	if offer.Price > r.currentHighestOffer.Price {
+	if offer.Price > r.currentHighestOffer.Price+r.minimalRaise {
 		r.currentHighestOffer = offer
 		id, _ := primitive.ObjectIDFromHex(r.id)
 		filter := bson.D{{"_id", id}}

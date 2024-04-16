@@ -45,6 +45,7 @@ func (s *Server) AddAuction(id string, end int64) (*Auction, error) {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 	auct, err := CreateAuction(id, end, s)
+	fmt.Println(auct)
 	if err != nil {
 		return nil, err
 	}

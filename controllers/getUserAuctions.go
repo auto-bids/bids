@@ -6,6 +6,7 @@ import (
 	"bids/responses"
 	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
 	"time"
@@ -18,7 +19,18 @@ func GetUserAuctions(ctx *gin.Context) {
 		defer close(result)
 		defer cancel()
 		email := c.Param("email")
+		status := models.Status{Status: c.Query("status")}
+		validate := validator.New(validator.WithRequiredStructEnabled())
+		if err := validate.Struct(status); err != nil {
+			result <- responses.Response{
+				Status:  http.StatusInternalServerError,
+				Message: "Error validation sort query",
+				Data:    map[string]interface{}{"error": err.Error()},
+			}
+			return
+		}
 		filter := bson.D{{"owner", email}}
+		
 		var auction []models.Auction
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
 		res, err := auctionsCollection.Find(ctxDB, filter)
