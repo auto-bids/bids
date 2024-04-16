@@ -29,8 +29,19 @@ func GetUserAuctions(ctx *gin.Context) {
 			}
 			return
 		}
-		filter := bson.D{{"owner", email}}
-		
+
+		filter := bson.M{"owner": email}
+		if status.Status != "" {
+			switch status.Status {
+			case "ended":
+				filter["end"] = bson.M{"$lte": time.Now().Unix()}
+			case "ongoing":
+				filter["end"] = bson.M{"$gte": time.Now().Unix()}
+				filter["start"] = bson.M{"$lte": time.Now().Unix()}
+			case "notstarted":
+				filter["start"] = bson.M{"$gte": time.Now().Unix()}
+			}
+		}
 		var auction []models.Auction
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
 		res, err := auctionsCollection.Find(ctxDB, filter)

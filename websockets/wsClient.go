@@ -6,7 +6,6 @@ import (
 	"bids/responses"
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"go.mongodb.org/mongo-driver/bson"
@@ -60,7 +59,7 @@ func (c *Client) JoinAuction(dest string) {
 	}
 	if auction.End < time.Now().Unix() {
 		wsErr := responses.ResponseWs{
-			Message: "auction has ended",
+			Message: "ended",
 			Data:    map[string]interface{}{"error": "ended"},
 		}
 		res, _ := json.Marshal(wsErr)
@@ -101,6 +100,14 @@ func (c *Client) JoinAuction(dest string) {
 	res, _ := json.Marshal(&wsRes)
 	c.WriteMess <- res
 }
+func (c *Client) LeaveAuction(dest string) {
+	auct := c.Auctions[dest]
+	mess, _ := json.Marshal(responses.ResponseWs{Message: "disconnected"})
+	if auct != nil {
+		auct.RemoveUser <- c
+	}
+	c.WriteMess <- mess
+}
 func (c *Client) makeBid(mess *models.Message) {
 	offer := mess.Offer
 	offer.Sender = c.UserID
@@ -127,9 +134,6 @@ func (c *Client) ReadPump() {
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
-				fmt.Println("DZIAŁA ZAMKNIĘCIE")
-				fmt.Println("c: ", len(c.Server.Clients))
-				fmt.Println("s: ", len(c.Server.Auctions))
 				c.closeConnection()
 			}
 			break
@@ -140,6 +144,8 @@ func (c *Client) ReadPump() {
 		switch mess.Options {
 		case "join":
 			c.JoinAuction(mess.Destination)
+		case "leave":
+			c.LeaveAuction(mess.Destination)
 		case "bid":
 			c.makeBid(mess)
 		}

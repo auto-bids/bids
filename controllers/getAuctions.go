@@ -40,7 +40,6 @@ func GetAllAuctions(ctx *gin.Context) {
 			return
 		}
 		filter := queries.GetOfferQuery(car)
-
 		var auction []models.GetAuctionShort
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
 		opts := options.Find().SetSkip(page * 10).SetLimit(page*10 + 10)
@@ -51,7 +50,6 @@ func GetAllAuctions(ctx *gin.Context) {
 				orderi = -1
 			case "asc":
 				orderi = 1
-
 			}
 			opts.SetSort(bson.D{{"car." + sort.By, orderi}})
 		}

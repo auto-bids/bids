@@ -26,8 +26,6 @@ type Car struct {
 type CarSearch struct {
 	Make              string  `json:"make" form:"make" validate:"max=30"`
 	Model             string  `json:"model" form:"model" validate:"max=30"`
-	PriceMin          int     `json:"price_min" form:"price_min"`
-	PriceMax          int     `json:"price_max" form:"price_max"`
 	MileageMin        int     `json:"mileage_min" form:"mileage_min"`
 	MileageMax        int     `json:"mileage_max" form:"mileage_max"`
 	YearMin           int     `json:"year_min" form:"year_min"`
@@ -47,6 +45,5 @@ type CarSearch struct {
 	CoordinatesX      float32 `json:"lat" form:"lat"`
 	CoordinatesY      float32 `json:"lng" form:"lng"`
 	Distance          float64 `json:"radius" form:"radius"`
-	FilterBy          string  `json:"filter_by" form:"filter_by"`
-	SortDirection     int     `json:"sort_direction" form:"sort_direction"`
+	Status            string  `json:"status" bson:"status"`
 }

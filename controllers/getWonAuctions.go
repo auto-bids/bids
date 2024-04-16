@@ -18,14 +18,21 @@ func GetWonAuctions(ctx *gin.Context) {
 		defer close(result)
 		defer cancel()
 		email := c.Param("email")
-		var auction []models.GetAuctionShort
+		var auction []models.Auction
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-
+		//timeNow := time.Now().Unix()
 		stages := bson.A{
 			bson.D{{"$match", bson.D{{"bidders", email}}}},
 			bson.D{
 				{"$project", bson.D{
-					{"_id", "$_id"},
+					{"_id", 1},
+					{"end", 1},
+					{"start", 1},
+					{"owner", 1},
+					{"car", 1},
+					{"startFrom", 1},
+					{"created", 1},
+					{"minimalRise", 1},
 					{"offers", bson.D{
 						{"$filter", bson.D{
 							{"input", "$offers"},

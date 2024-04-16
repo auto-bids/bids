@@ -55,6 +55,7 @@ func CreateAuction(name string, end int64, server *Server) (*Auction, error) {
 		fmt.Println(err)
 	}
 	hoffer := models.Offer{}
+	hoffer.Price = auction[0].StartFrom
 	if len(auction[0].Offers) != 0 {
 		hoffer = auction[0].Offers[0]
 	}
@@ -89,7 +90,7 @@ func (r *Auction) GetClient(client string) *Client {
 	return nil
 }
 func (r *Auction) endAuction() {
-	message, err := json.Marshal(r.currentHighestOffer)
+	message, err := json.Marshal(models.EndAuction{Status: "ended", Offer: r.currentHighestOffer})
 	if err != nil {
 		for client := range r.Clients {
 			client.WriteMess <- []byte("end")

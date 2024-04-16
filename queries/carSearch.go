@@ -2,7 +2,9 @@ package queries
 
 import (
 	"bids/models"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
+	"time"
 )
 
 func GetOfferQuery(offer models.CarSearch) bson.M {
@@ -14,14 +16,6 @@ func GetOfferQuery(offer models.CarSearch) bson.M {
 
 	if offer.Model != "" {
 		query["car.model"] = offer.Model
-	}
-
-	if offer.PriceMin != 0 && offer.PriceMax != 0 {
-		query["car.price"] = bson.M{"$gte": offer.PriceMin, "$lte": offer.PriceMax}
-	} else if offer.PriceMin != 0 {
-		query["car.price"] = bson.M{"$gte": offer.PriceMin}
-	} else if offer.PriceMax != 0 {
-		query["car.price"] = bson.M{"$lte": offer.PriceMax}
 	}
 
 	if offer.MileageMin != 0 && offer.MileageMax != 0 {
@@ -87,7 +81,21 @@ func GetOfferQuery(offer models.CarSearch) bson.M {
 	if offer.Condition != "" {
 		query["car.condition"] = offer.Condition
 	}
+	if offer.Status != "" {
+		fmt.Println(offer.Status)
+		switch offer.Status {
+		case "ended":
+			query["end"] = bson.M{"$lte": time.Now().Unix()}
+		case "started":
+			query["end"] = bson.M{"$gte": time.Now().Unix()}
+			query["start"] = bson.M{"$lte": time.Now().Unix()}
+		case "notstarted":
+			query["start"] = bson.M{"$gte": time.Now().Unix()}
+		default:
 
+		}
+
+	}
 	if offer.CoordinatesX != 0 && offer.CoordinatesY != 0 && offer.Distance != 0 {
 		query["car.location"] = bson.M{
 			"$geoWithin": bson.M{
