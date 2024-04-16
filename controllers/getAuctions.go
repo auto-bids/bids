@@ -35,7 +35,7 @@ func GetAllAuctions(ctx *gin.Context) {
 			return
 		}
 		var car models.CarSearch
-		err := c.ShouldBindJSON(&car)
+		err := c.ShouldBind(&car)
 		if err != nil {
 			return
 		}
