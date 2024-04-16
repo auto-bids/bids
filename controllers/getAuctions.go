@@ -41,7 +41,7 @@ func GetAllAuctions(ctx *gin.Context) {
 		}
 		filter := queries.GetOfferQuery(car)
 
-		var auction []models.Auction
+		var auction []models.GetAuctionShort
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
 		opts := options.Find().SetSkip(page * 10).SetLimit(page*10 + 10)
 		if sort.By != "" || sort.Order != "" {

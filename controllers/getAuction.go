@@ -19,7 +19,7 @@ func GetAuction(ctx *gin.Context) {
 		ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer close(result)
 		defer cancel()
-		var auction models.Auction
+		var auction models.GetAuctionShort
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
 		id, _ := primitive.ObjectIDFromHex(auctionID)
 		filter := bson.D{{"_id", id}}

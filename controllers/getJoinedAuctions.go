@@ -19,7 +19,7 @@ func GetJoinedAuctions(ctx *gin.Context) {
 		defer cancel()
 		email := c.Param("email")
 		filter := bson.D{{"bidders", email}}
-		var auction []models.Auction
+		var auction []models.GetAuctionShort
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
 		res, err := auctionsCollection.Find(ctxDB, filter)
 		if err != nil {

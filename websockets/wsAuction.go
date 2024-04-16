@@ -89,7 +89,12 @@ func (r *Auction) GetClient(client string) *Client {
 	return nil
 }
 func (r *Auction) endAuction() {
-	message := []byte("end")
+	message, err := json.Marshal(r.currentHighestOffer)
+	if err != nil {
+		for client := range r.Clients {
+			client.WriteMess <- []byte("end")
+		}
+	}
 	for client := range r.Clients {
 		client.WriteMess <- message
 	}
