@@ -32,6 +32,6 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: autobidscloud/auto-bids:frontend
+          tags: autobidscloud/auto-bids:bids
           platforms: linux/amd64
 
