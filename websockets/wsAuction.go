@@ -145,9 +145,7 @@ func (r *Auction) RunAuction() {
 			}
 		case <-r.Stop:
 			return
-		default:
 		}
-		time.Sleep(time.Microsecond * 500)
 	}
 
 }

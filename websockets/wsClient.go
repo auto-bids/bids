@@ -149,7 +149,6 @@ func (c *Client) ReadPump() {
 		case "bid":
 			c.makeBid(mess)
 		}
-		time.Sleep(time.Millisecond)
 	}
 }
 func (c *Client) WritePump() {
@@ -184,6 +183,5 @@ func (c *Client) WritePump() {
 				return
 			}
 		}
-		time.Sleep(time.Millisecond)
 	}
 }
