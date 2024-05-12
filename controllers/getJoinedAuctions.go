@@ -7,7 +7,9 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -18,10 +20,12 @@ func GetJoinedAuctions(ctx *gin.Context) {
 		defer close(result)
 		defer cancel()
 		email := c.Param("email")
+		page, err := strconv.ParseInt(ctx.Param("page"), 10, 64)
 		filter := bson.D{{"bidders", email}}
 		var auction []models.GetAuctionShort
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		res, err := auctionsCollection.Find(ctxDB, filter)
+		opts := options.Find().SetSkip(page * 10).SetLimit(page*10 + 10)
+		res, err := auctionsCollection.Find(ctxDB, filter, opts)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,

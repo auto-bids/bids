@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -18,11 +19,12 @@ func GetWonAuctions(ctx *gin.Context) {
 		defer close(result)
 		defer cancel()
 		email := c.Param("email")
+		page, err := strconv.ParseInt(ctx.Param("page"), 10, 64)
 		var auction []models.Auction
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		//timeNow := time.Now().Unix()
+		timeNow := time.Now().Unix()
 		stages := bson.A{
-			bson.D{{"$match", bson.D{{"bidders", email}}}},
+			bson.D{{"$match", bson.D{{"bidders", email}, {"end", bson.M{"$lte": timeNow}}}}},
 			bson.D{
 				{"$project", bson.D{
 					{"_id", 1},
@@ -48,6 +50,8 @@ func GetWonAuctions(ctx *gin.Context) {
 				}},
 			},
 			bson.D{{"$match", bson.D{{"offers", bson.M{"$ne": []interface{}{}}}}}},
+			bson.D{{"$skip", page * 10}},
+			bson.D{{"$limit", page*10 + 10}},
 		}
 
 		res, err := auctionsCollection.Aggregate(ctxDB, stages)

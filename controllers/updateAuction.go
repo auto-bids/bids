@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 	"time"
 )
@@ -20,13 +21,15 @@ func UpdateAuction(ctx *gin.Context) {
 		ctxDB, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer close(result)
 		defer cancel()
+		auctionsCollection := database.GetCollection(database.DB, "auctions")
+		id, _ := primitive.ObjectIDFromHex(auctionid)
 		var res models.UpdateAuction
 		validate := validator.New(validator.WithRequiredStructEnabled())
 		err := c.ShouldBindJSON(&res)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusBadRequest,
-				Message: "Invalid request body",
+				Message: "Invalid request",
 				Data:    map[string]interface{}{"error": err.Error()},
 			}
 			return
@@ -40,8 +43,25 @@ func UpdateAuction(ctx *gin.Context) {
 			}
 			return
 		}
-		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		filter := bson.D{{"_id", auctionid}, {"owner", email}}
+		var check models.GetAuctionShort
+		filter := bson.D{{"_id", id}, {"owner", email}}
+		auctionsCollection.FindOne(ctxDB, filter).Decode(&check)
+		if err != nil {
+			result <- responses.Response{
+				Status:  http.StatusNotFound,
+				Message: "offer not found",
+				Data:    map[string]interface{}{"error": err.Error()},
+			}
+			return
+		}
+		if time.Now().Unix() >= check.Start {
+			result <- responses.Response{
+				Status:  http.StatusBadRequest,
+				Message: "can't update an auction",
+				Data:    map[string]interface{}{},
+			}
+			return
+		}
 		auctionsCollection.UpdateOne(ctxDB, filter, res)
 		if err != nil {
 			result <- responses.Response{

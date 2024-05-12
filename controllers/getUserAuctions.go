@@ -8,7 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -19,6 +21,7 @@ func GetUserAuctions(ctx *gin.Context) {
 		defer close(result)
 		defer cancel()
 		email := c.Param("email")
+		page, err := strconv.ParseInt(ctx.Param("page"), 10, 64)
 		status := models.Status{Status: c.Query("status")}
 		validate := validator.New(validator.WithRequiredStructEnabled())
 		if err := validate.Struct(status); err != nil {
@@ -44,7 +47,8 @@ func GetUserAuctions(ctx *gin.Context) {
 		}
 		var auction []models.Auction
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		res, err := auctionsCollection.Find(ctxDB, filter)
+		opts := options.Find().SetSkip(page * 10).SetLimit(page*10 + 10)
+		res, err := auctionsCollection.Find(ctxDB, filter, opts)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,

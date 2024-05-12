@@ -6,6 +6,7 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 	"time"
 )
@@ -19,13 +20,22 @@ func DeleteAuction(ctx *gin.Context) {
 		defer close(result)
 		defer cancel()
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		filter := bson.D{{"_id", auctionid}, {"owner", email}}
+		id, _ := primitive.ObjectIDFromHex(auctionid)
+		filter := bson.D{{"_id", id}, {"owner", email}}
 		one, err := auctionsCollection.DeleteOne(ctxDB, filter)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,
-				Message: "Error updating auction",
+				Message: "Error removing auction",
 				Data:    map[string]interface{}{"error": err.Error()},
+			}
+			return
+		}
+		if one.DeletedCount == 0 {
+			result <- responses.Response{
+				Status:  http.StatusNotFound,
+				Message: "auction not found",
+				Data:    map[string]interface{}{"error": one},
 			}
 			return
 		}

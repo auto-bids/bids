@@ -42,9 +42,8 @@ type GetAuctionForRoom struct {
 	Start  int64   `bson:"start" json:"start"`
 }
 type UpdateAuction struct {
-	Id  string `bson:"_id" json:"_id"`
-	End int64  `bson:"end" json:"end" validate:"required,datetime"`
-	Car Car    `json:"car" bson:"car" validate:"required"`
+	MinimalRaise int64     `bson:"minimalRaise" json:"minimalRaise"`
+	Car          CarUpdate `json:"car" bson:"car" `
 }
 type EndAuction struct {
 	Offer  Offer  `bson:"offer" json:"offer"`
