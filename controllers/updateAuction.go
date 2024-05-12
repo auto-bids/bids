@@ -62,7 +62,16 @@ func UpdateAuction(ctx *gin.Context) {
 			}
 			return
 		}
-		auctionsCollection.UpdateOne(ctxDB, filter, res)
+		update := bson.D{{"$set", bson.D{{"minimalRaise", res.MinimalRaise}, {"car", res.Car}}}}
+		one, err := auctionsCollection.UpdateOne(ctxDB, filter, update)
+		if err != nil {
+			result <- responses.Response{
+				Status:  http.StatusInternalServerError,
+				Message: "Error updating auction",
+				Data:    map[string]interface{}{"error": err.Error()},
+			}
+			return
+		}
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,
@@ -74,7 +83,7 @@ func UpdateAuction(ctx *gin.Context) {
 		result <- responses.Response{
 			Status:  http.StatusAccepted,
 			Message: "accepted",
-			Data:    map[string]interface{}{"data": res},
+			Data:    map[string]interface{}{"data": one},
 		}
 	}(ctx.Copy())
 	res := <-result
