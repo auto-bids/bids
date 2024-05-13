@@ -48,7 +48,7 @@ func PostAuction(ctx *gin.Context) {
 			result <- responses.Response{
 				Status:  http.StatusBadRequest,
 				Message: "validation failed",
-				Data:    map[string]interface{}{"error": err},
+				Data:    map[string]interface{}{"error": err.Error()},
 			}
 			return
 		}

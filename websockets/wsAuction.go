@@ -116,7 +116,6 @@ func (r *Auction) sendOffer(offer models.Offer) {
 				client.WriteMess <- data
 			}
 		} else {
-
 			r.GetClient(offer.Sender).WriteMess <- []byte("error")
 		}
 
@@ -127,11 +126,8 @@ func (r *Auction) sendOffer(offer models.Offer) {
 
 }
 func (r *Auction) RunAuction() {
+	timer := time.NewTimer(time.Duration(r.End-time.Now().Unix()) * time.Second)
 	for {
-		if time.Now().Unix() == r.End {
-			r.endAuction()
-			return
-		}
 		select {
 		case offer := <-r.Offer:
 			r.sendOffer(offer)
@@ -143,6 +139,11 @@ func (r *Auction) RunAuction() {
 				r.Server.RemoveAuction(r.id)
 				return
 			}
+		}
+		select {
+		case <-timer.C:
+			r.endAuction()
+			return
 		case <-r.Stop:
 			return
 		}
