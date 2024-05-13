@@ -62,7 +62,15 @@ func UpdateAuction(ctx *gin.Context) {
 			}
 			return
 		}
-		update := bson.D{{"$set", bson.D{{"minimalRaise", res.MinimalRaise}, {"car", res.Car}}}}
+
+		update := bson.D{{"$set", bson.D{
+			{"minimalRaise", res.MinimalRaise},
+			{"car.title", res.Title},
+			{"car.description", res.Description},
+			{"car.photos", res.Photos},
+			{"car.year", res.Year},
+			{"car.mileage", res.Mileage},
+			{"car.telephone_number", res.TelephoneNumber}}}}
 		one, err := auctionsCollection.UpdateOne(ctxDB, filter, update)
 		if err != nil {
 			result <- responses.Response{

@@ -47,11 +47,3 @@ type CarSearch struct {
 	Distance          float64 `json:"radius" form:"radius"`
 	Status            string  `json:"status" bson:"status"`
 }
-type CarUpdate struct {
-	Title           string   `json:"title" bson:"title" validate:"max=40"`
-	Description     string   `json:"description" bson:"description" validate:"max=3000"`
-	Photos          []string `json:"photos" bson:"photos" `
-	Year            int      `json:"year" bson:"year" `
-	Mileage         int      `json:"mileage" bson:"mileage"`
-	TelephoneNumber string   `json:"telephone_number" bson:"telephone_number"`
-}

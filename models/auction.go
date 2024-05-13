@@ -42,8 +42,13 @@ type GetAuctionForRoom struct {
 	Start  int64   `bson:"start" json:"start"`
 }
 type UpdateAuction struct {
-	MinimalRaise int64     `bson:"minimalRaise" json:"minimalRaise"`
-	Car          CarUpdate `json:"car" bson:"car" `
+	MinimalRaise    int64    `bson:"minimalRaise" json:"minimalRaise"`
+	Title           string   `json:"title" bson:"title" validate:"max=40"`
+	Description     string   `json:"description" bson:"description" validate:"max=3000"`
+	Photos          []string `json:"photos" bson:"photos" `
+	Year            int      `json:"year" bson:"year" `
+	Mileage         int      `json:"mileage" bson:"mileage"`
+	TelephoneNumber string   `json:"telephone_number" bson:"telephone_number"`
 }
 type EndAuction struct {
 	Offer  Offer  `bson:"offer" json:"offer"`
