@@ -139,8 +139,6 @@ func (r *Auction) RunAuction() {
 				r.Server.RemoveAuction(r.id)
 				return
 			}
-		}
-		select {
 		case <-timer.C:
 			r.endAuction()
 			return
