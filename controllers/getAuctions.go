@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"strconv"
 	"time"
@@ -40,20 +40,45 @@ func GetAllAuctions(ctx *gin.Context) {
 			return
 		}
 		filter := queries.GetOfferQuery(car)
-		var auction []models.GetAuctionShort
+		var auction []models.Auction
 		auctionsCollection := database.GetCollection(database.DB, "auctions")
-		opts := options.Find().SetSkip(page * 10).SetLimit(page*10 + 10)
-		if sort.By != "" || sort.Order != "" {
+		matchStage := bson.D{{"$match", filter}}
+		sortStage := bson.D{{"$sort", bson.D{{"car.title", 1}}}}
+		projectStage := bson.D{
+			{"$project", bson.D{
+				{"_id", 1},
+				{"end", 1},
+				{"start", 1},
+				{"owner", 1},
+				{"car", 1},
+				{"startFrom", 1},
+				{"created", 1},
+				{"minimalRise", 1},
+				{"offers", bson.D{
+					{"$filter", bson.D{
+						{"input", "$offers"},
+						{"as", "item"},
+						{"cond", bson.D{{"$eq", bson.A{"$$item.offer", bson.M{"$max": "$offers.offer"}}}}}},
+					},
+				}},
+			}},
+		}
+		skipStage := bson.D{{"$skip", page * 10}}
+		limitStage := bson.D{{"$limit", page*10 + 10}}
+		if sort.By != "" && sort.Order != "" {
 			var orderi int8
 			switch order {
 			case "desc":
 				orderi = -1
 			case "asc":
 				orderi = 1
+			default:
+				orderi = -1
 			}
-			opts.SetSort(bson.D{{"car." + sort.By, orderi}})
+			sortStage = bson.D{{"$sort", bson.D{{"car." + sort.By, orderi}}}}
 		}
-		res, err := auctionsCollection.Find(ctxDB, filter, opts)
+		stages := mongo.Pipeline{matchStage, sortStage, projectStage, skipStage, limitStage}
+		res, err := auctionsCollection.Aggregate(ctxDB, stages)
 		if err != nil {
 			result <- responses.Response{
 				Status:  http.StatusInternalServerError,
@@ -79,3 +104,4 @@ func GetAllAuctions(ctx *gin.Context) {
 	res := <-result
 	ctx.JSON(res.Status, res)
 }
+
