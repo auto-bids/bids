@@ -22,6 +22,11 @@ type Car struct {
 	FirstRegistration  string   `json:"first_registration" bson:"first_registration"`
 	Condition          string   `json:"condition" bson:"condition"`
 	TelephoneNumber    string   `json:"telephone_number" bson:"telephone_number"`
+	Location           Location `json:"location" bson:"location"`
+}
+type Location struct {
+	Type        string    `json:"type" bson:"type" form: "type" example:"Point"`
+	Coordinates []float32 `json:"coordinates" bson:"coordinates" form:"coordinates" example:"53.3,18.5"`
 }
 type CarSearch struct {
 	Make              string  `json:"make" form:"make" validate:"max=30"`
